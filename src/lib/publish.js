@@ -199,6 +199,12 @@ async function pushToGitHub(token) {
   });
   if (pushed.code !== 0) {
     const detail = pushed.stderr || pushed.stdout || "";
+    if (/permission to .+ denied to|requested URL returned error: 403/i.test(detail)) {
+      throw new HttpError(
+        403,
+        "GitHub signed in, then refused to upload the code. Edit the token and set repository access to All repositories and Contents to Read and write. Save it, then publish again with the same repository name.",
+      );
+    }
     if (/invalid credentials|authentication failed/i.test(detail)) {
       throw new HttpError(
         401,

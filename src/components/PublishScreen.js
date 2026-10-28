@@ -112,7 +112,7 @@ export function PublishScreen() {
       <section className="space-y-4 rounded-2xl border border-border p-4">
         <h2 className="text-lg font-semibold">1. GitHub</h2>
         <p className="text-sm text-muted-foreground">
-          Create a token at github.com/settings/tokens. A fine-grained token needs resource owner set to your account, repository access set to All repositories, Administration set to Read and write, and Contents set to Read and write. A classic token needs the repo scope. Leave the organization blank unless the token belongs to that organization. The token is used once and is not saved.
+          Create a token at github.com/settings/tokens. For a fine-grained token, set the resource owner to the account that owns the repository, repository access to All repositories, Administration to Read and write, and Contents to Read and write. Only selected repositories will not include a repository created during publish. A classic token needs the full repo scope. Leave the organization blank unless the repository belongs to an organization. The token is used once and is not saved.
         </p>
         <Field label="GitHub token">
           <input className={boxField} type="password" autoComplete="off" value={form.githubToken} onChange={(event) => update("githubToken", event.target.value)} required />
