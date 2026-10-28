@@ -136,7 +136,7 @@ export function PublishScreen() {
       <section className="space-y-4 rounded-2xl border border-border p-4">
         <h2 className="text-lg font-semibold">2. Vercel</h2>
         <p className="text-sm text-muted-foreground">
-          Create a token at vercel.com/account/tokens. The database connection and session secret already on this computer are copied to Vercel as encrypted production settings.
+          Create a token at vercel.com/account/tokens and choose Full Account. A token limited to one existing project cannot create this site. If the account has a team, enter that team's slug. The database connection and session secret already on this computer are copied to Vercel as encrypted production settings.
         </p>
         <Field label="Vercel token">
           <input className={boxField} type="password" autoComplete="off" value={form.vercelToken} onChange={(event) => update("vercelToken", event.target.value)} required />

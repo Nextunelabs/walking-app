@@ -243,6 +243,23 @@ async function resolveTeamId(token, slug) {
 }
 
 async function ensureVercelProject(token, name, teamId) {
+  const teamIds = await teamIdsToTry(token, teamId);
+  for (const id of teamIds) {
+    try {
+      return await createOrGetProject(token, name, id);
+    } catch (error) {
+      if (!isProjectCreateDenied(error)) throw error;
+    }
+  }
+  const slugs = await teamSlugs(token);
+  const where = slugs.length ? ` Enter the Vercel team slug: ${slugs.join(", ")}.` : "";
+  throw new HttpError(
+    403,
+    `Vercel did not allow this token to create a project.${where} Create the token with Full Account access, or as a Team token for that team. A token limited to one existing project cannot create a new one.`,
+  );
+}
+
+async function createOrGetProject(token, name, teamId) {
   try {
     return await vercel(token, withTeam("/v10/projects", teamId), {
       method: "POST",
@@ -252,6 +269,37 @@ async function ensureVercelProject(token, name, teamId) {
     if (error.status !== 409) throw error;
   }
   return vercel(token, withTeam(`/v9/projects/${encodeURIComponent(name)}`, teamId));
+}
+
+async function teamIdsToTry(token, teamId) {
+  if (teamId) return [teamId];
+  const teams = await listTeams(token);
+  const owners = teams.filter((team) => teamRole(team) === "OWNER");
+  if (teams.length === 1) return ["", teams[0].id];
+  if (owners.length === 1) return ["", owners[0].id];
+  return [""];
+}
+
+async function teamSlugs(token) {
+  const teams = await listTeams(token);
+  return teams.map((team) => team.slug).filter(Boolean);
+}
+
+async function listTeams(token) {
+  try {
+    const data = await vercel(token, "/v2/teams?limit=100");
+    return data.teams || [];
+  } catch {
+    return [];
+  }
+}
+
+function teamRole(team) {
+  return team.membership?.role || team.role || "";
+}
+
+function isProjectCreateDenied(error) {
+  return error?.status === 403 || /permission to create the project/i.test(error?.message || "");
 }
 
 async function upsertEnv(token, projectId, teamId, items) {
