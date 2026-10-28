@@ -323,11 +323,15 @@ async function upsertEnv(token, projectId, teamId, items) {
 }
 
 async function deployToVercel(token, project) {
+  const orgId = project.accountId || project.orgId;
+  if (!project.id || !orgId) {
+    throw new HttpError(502, "Vercel did not return the project id needed to deploy.");
+  }
   const result = await run(process.platform === "win32" ? "npx.cmd" : "npx", ["--yes", "vercel", "deploy", "--prod", "--yes"], {
     env: {
       CI: "1",
       VERCEL_TOKEN: token,
-      VERCEL_ORG_ID: project.accountId,
+      VERCEL_ORG_ID: orgId,
       VERCEL_PROJECT_ID: project.id,
       NEXT_TELEMETRY_DISABLED: "1",
     },
@@ -405,11 +409,12 @@ function run(command, args, options = {}) {
       resolve(result);
     };
     const base = options.cleanEnv ? cleanProcessEnv() : { ...process.env };
+    const commandNeedsShell = process.platform === "win32" && /\.(cmd|bat)$/i.test(command);
     const child = spawn(command, args, {
       cwd: root,
-      env: { ...base, ...(options.env || {}) },
+      env: stringEnv({ ...base, ...(options.env || {}) }),
       windowsHide: true,
-      shell: false,
+      shell: commandNeedsShell,
     });
     let stdout = "";
     let stderr = "";
@@ -434,6 +439,14 @@ function run(command, args, options = {}) {
       finish({ code: 1, stdout: "", stderr: redact(error.message) });
     });
   });
+}
+
+function stringEnv(env) {
+  const result = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value === "string") result[key] = value;
+  }
+  return result;
 }
 
 function cleanProcessEnv() {
