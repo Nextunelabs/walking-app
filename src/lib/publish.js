@@ -189,18 +189,40 @@ async function ensureRemote(cloneUrl) {
 }
 
 async function pushToGitHub(token) {
-  const pushed = await run("git", ["push", "-u", "origin", "HEAD:main"], {
-    env: gitAuthEnv(token),
+  const current = await run("git", ["remote", "get-url", "origin"]);
+  if (current.code !== 0 || !current.stdout.trim()) {
+    throw new HttpError(500, "The GitHub remote is missing.");
+  }
+  const authed = githubPushUrl(current.stdout.trim(), token);
+  const pushed = await run("git", ["-c", "credential.helper=", "push", authed, "HEAD:main"], {
+    env: { GIT_TERMINAL_PROMPT: "0", GCM_INTERACTIVE: "Never" },
   });
-  if (pushed.code !== 0) throw new HttpError(502, pushed.stderr || "GitHub rejected the push.");
+  if (pushed.code !== 0) {
+    const detail = pushed.stderr || pushed.stdout || "";
+    if (/invalid credentials|authentication failed/i.test(detail)) {
+      throw new HttpError(
+        401,
+        "GitHub rejected the token while uploading the code. The repository already exists. Set Contents to Read and write on the token, authorize the token for the organization if GitHub asks, and publish again.",
+      );
+    }
+    throw new HttpError(502, detail || "GitHub rejected the push.");
+  }
 }
 
-function gitAuthEnv(token) {
-  return {
-    GIT_CONFIG_COUNT: "1",
-    GIT_CONFIG_KEY_0: "http.extraheader",
-    GIT_CONFIG_VALUE_0: `Authorization: Bearer ${token}`,
-  };
+function githubPushUrl(remote, token) {
+  const source = remote.endsWith(".git") ? remote : `${remote}.git`;
+  let url;
+  try {
+    url = new URL(source);
+  } catch {
+    throw new HttpError(400, "The GitHub remote address is not a valid URL.");
+  }
+  if (url.protocol !== "https:" || url.hostname !== "github.com") {
+    throw new HttpError(400, "The GitHub remote must be an https://github.com address.");
+  }
+  url.username = "x-access-token";
+  url.password = token;
+  return url.toString();
 }
 
 async function resolveTeamId(token, slug) {
@@ -379,5 +401,7 @@ function redact(value) {
     .replace(/Bearer\s+[A-Za-z0-9._\-]+/gi, "Bearer ***")
     .replace(/ghp_[A-Za-z0-9_]+/g, "ghp_***")
     .replace(/github_pat_[A-Za-z0-9_]+/g, "github_pat_***")
-    .replace(/Authorization:\s*\S+/gi, "Authorization: ***");
+    .replace(/Authorization:\s*\S+/gi, "Authorization: ***")
+    .replace(/x-access-token:[^@\s]+/gi, "x-access-token:***")
+    .replace(/https:\/\/[^/\s:@]+:[^/\s@]+@github\.com/gi, "https://***@github.com");
 }
