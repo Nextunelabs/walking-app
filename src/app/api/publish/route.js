@@ -3,7 +3,6 @@ import { assertSameOrigin, jsonOk, readJson, toErrorResponse, zodError } from "@
 import { publishProject, publishReadiness, publishSchema } from "@/lib/publish.js";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 800;
 
 export async function GET() {
   try {

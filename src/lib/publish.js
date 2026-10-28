@@ -338,10 +338,15 @@ async function deployToVercel(token, project) {
     cleanEnv: true,
     timeoutMs: 8 * 60 * 1000,
   });
-  if (result.code !== 0) throw new HttpError(502, result.stderr || result.stdout || "Vercel deployment failed.");
+  if (result.code !== 0) throw new HttpError(502, vercelFailure(`${result.stdout}\n${result.stderr}`));
   const url = productionUrl(`${result.stdout}\n${result.stderr}`);
   if (!url) throw new HttpError(502, "Vercel finished without a public address.");
   return url;
+}
+
+function vercelFailure(output) {
+  const line = output.match(/^Error:\s+.+$/m);
+  return line ? line[0] : "Vercel deployment failed.";
 }
 
 function productionUrl(output) {
