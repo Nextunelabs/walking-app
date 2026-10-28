@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+.vercel
+.env
+.env.*
+!.env.example
+npm-debug.log*
+README.md
+scripts/test-flow.mjs
+scripts/test-distance.mjs
+agent-transcripts
+*.md

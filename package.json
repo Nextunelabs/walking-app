@@ -1,0 +1,35 @@
+{
+  "name": "walking-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3010",
+    "build": "next build",
+    "start": "next start -p 3010",
+    "lint": "eslint",
+    "db:schema": "node scripts/apply-schema.mjs",
+    "db:seed": "node scripts/seed-admin.mjs",
+    "test": "node --test scripts/test-distance.mjs",
+    "test:flow": "node --test scripts/test-flow.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.2",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.8.0",
+    "next": "16.2.3",
+    "pg": "^8.22.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "tailwindcss": "^4"
+  }
+}
