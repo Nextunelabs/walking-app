@@ -1,6 +1,5 @@
 import { requireApiAdmin } from "@/lib/guards.js";
 import { assertSameOrigin, jsonOk, readJson, toErrorResponse, zodError } from "@/lib/http.js";
-import { HttpError } from "@/lib/errors.js";
 import { publishProject, publishReadiness, publishSchema } from "@/lib/publish.js";
 
 export const dynamic = "force-dynamic";
@@ -41,8 +40,8 @@ export async function POST(request) {
       try {
         await publishProject(input, send);
       } catch (error) {
-        const message = error instanceof HttpError ? error.message : "Publishing failed.";
-        send({ error: message });
+        console.error(error);
+        send({ error: error?.message || "The publish step did not finish." });
       } finally {
         controller.close();
       }

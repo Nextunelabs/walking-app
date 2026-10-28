@@ -67,7 +67,7 @@ export function PublishScreen() {
       if (!contentType.includes("ndjson")) {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          const failure = new Error(data.error || "Publishing failed");
+          const failure = new Error(data.error || "The publish step did not finish.");
           failure.details = data.details;
           throw failure;
         }

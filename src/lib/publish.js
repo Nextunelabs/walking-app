@@ -75,8 +75,16 @@ export async function publishProject(input, send) {
   send({ message: committed ? "Committed the project." : "The Git commit is already current." });
   await ensureRemote(repo.clone_url || `${repoUrl}.git`);
   send({ message: "Pushing the code to GitHub." });
-  await pushToGitHub(input.githubToken);
-  send({ message: "Code is on GitHub.", repoUrl: repo.html_url || repoUrl });
+  const publishedRepoUrl = repo.html_url || repoUrl;
+  const pushed = await pushToGitHub(input.githubToken);
+  if (pushed.ok) {
+    send({ message: "Code is on GitHub.", repoUrl: publishedRepoUrl });
+  } else {
+    send({
+      message: `${pushed.warning} The site will still be published from this computer.`,
+      repoUrl: publishedRepoUrl,
+    });
+  }
 
   send({ message: "Checking the Vercel token." });
   const teamId = await resolveTeamId(input.vercelToken, input.vercelTeam);
@@ -92,7 +100,6 @@ export async function publishProject(input, send) {
 
   send({ message: "Deploying to Vercel. This can take a few minutes." });
   const firstUrl = await deployToVercel(input.vercelToken, project);
-  const publishedRepoUrl = repo.html_url || repoUrl;
   send({ message: "The first production deployment is live.", url: firstUrl, repoUrl: publishedRepoUrl });
   await upsertEnv(input.vercelToken, project.id, teamId, [
     { key: "NEXT_PUBLIC_APP_URL", value: firstUrl, type: "plain", target: ["production"] },
@@ -199,20 +206,16 @@ async function pushToGitHub(token) {
   });
   if (pushed.code !== 0) {
     const detail = pushed.stderr || pushed.stdout || "";
-    if (/permission to .+ denied to|requested URL returned error: 403/i.test(detail)) {
-      throw new HttpError(
-        403,
-        "GitHub signed in, then refused to upload the code. Edit the token and set repository access to All repositories and Contents to Read and write. Save it, then publish again with the same repository name.",
-      );
-    }
-    if (/invalid credentials|authentication failed/i.test(detail)) {
-      throw new HttpError(
-        401,
-        "GitHub rejected the token while uploading the code. The repository already exists. Set Contents to Read and write on the token, authorize the token for the organization if GitHub asks, and publish again.",
-      );
+    if (/permission to .+ denied to|requested URL returned error: 403|invalid credentials|authentication failed/i.test(detail)) {
+      return {
+        ok: false,
+        warning:
+          "GitHub did not accept the code upload. On the token, set repository access to All repositories and Contents to Read and write, then publish again to update the repository.",
+      };
     }
     throw new HttpError(502, detail || "GitHub rejected the push.");
   }
+  return { ok: true };
 }
 
 function githubPushUrl(remote, token) {
